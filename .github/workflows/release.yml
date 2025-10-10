@@ -4,7 +4,7 @@ on: workflow_dispatch
 
 jobs:
   version:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     name: "Version"
     outputs:
       version: ${{ steps.cz.outputs.version }}
@@ -28,7 +28,7 @@ jobs:
   release:
     name: Release
     needs: version
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Create Release

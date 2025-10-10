@@ -1,0 +1,14 @@
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+from uuid import uuid4
+
+# Create your models here.
+
+
+class AbstractBaseModel(models.Model):
+    uuid = models.UUIDField(verbose_name=_('uuid'), default=uuid4, editable=False, unique=True, db_index=True)
+    created_at = models.DateTimeField(verbose_name=_('created at'), auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name=_('updated at'), auto_now=True)
+
+    class Meta:
+        abstract = True

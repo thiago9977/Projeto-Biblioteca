@@ -9,7 +9,7 @@ on:
 
 jobs:
   django:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     strategy:
       max-parallel: 4

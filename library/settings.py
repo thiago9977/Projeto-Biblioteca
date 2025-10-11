@@ -9,9 +9,10 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+import sentry_sdk
 from pathlib import Path
 from decouple import config, Csv
+from sentry_sdk.integrations.django import DjangoIntegration
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,6 +29,7 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=Csv())
 
+ENV = config('ENV', default='localhost')
 
 # Application definition
 
@@ -141,3 +143,15 @@ JAZZMIN_SETTINGS = {
         "core.Livro": "fas fa-book",
     },
 }
+
+# Sentry
+
+
+
+sentry_sdk.init(
+    environment=ENV,
+    dsn=config('SENTRY_DSN', default=''),
+    integrations=[DjangoIntegration()],
+    traces_sample_rate=1.0,
+    send_default_pii=True,
+)

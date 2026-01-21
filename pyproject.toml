@@ -1,0 +1,23 @@
+[project]
+name = "library"
+package = true
+readme = "README.md"
+requires-python = ">=3.10,<4.0"
+ 
+[tool.ruff]
+line-length = 88
+ignore = ["PT009"]
+exclude = [
+    "manage.py",
+]
+
+[tool.ruff.lint]
+select = ['I', 'F', 'E', 'W', 'PL', 'PT']
+
+
+[tool.ruff.format]
+quote-style = 'single'
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

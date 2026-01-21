@@ -1,0 +1,448 @@
+<!-- templates/profile.html -->
+{% extends 'base.html' %}
+
+{% block title %}Meu Perfil - BiblioTech{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 mb-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="position-relative d-inline-block mb-3">
+                        {% if user.profile.avatar %}
+                        <img src="{{ user.profile.avatar.url }}" 
+                             class="rounded-circle" width="128" height="128" alt="Avatar" id="profileAvatar"
+                             style="object-fit: cover;">
+                        {% else %}
+                        <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=2c3e50&color=fff&size=128" 
+                             class="rounded-circle" width="128" height="128" alt="Avatar" id="profileAvatar">
+                        {% endif %}
+                        <button class="btn btn-sm btn-primary position-absolute bottom-0 end-0 rounded-circle" 
+                                style="width: 40px; height: 40px;" data-bs-toggle="modal" data-bs-target="#avatarModal">
+                            <i class="bi bi-camera"></i>
+                        </button>
+                    </div>
+                    <h5>{{ user.get_full_name|default:user.username }}</h5>
+                    <p class="text-muted small mb-0">Membro desde {{ user.date_joined|date:"M Y" }}</p>
+                </div>
+            </div>
+            
+            <div class="list-group mt-3">
+                <a href="{% url 'usuarios:dashboard' %}" class="list-group-item list-group-item-action">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+                <a href="#profile-info" class="list-group-item list-group-item-action active">
+                    <i class="bi bi-person"></i> Informações Pessoais
+                </a>
+                <a href="#security" class="list-group-item list-group-item-action">
+                    <i class="bi bi-shield-lock"></i> Segurança
+                </a>
+                <a href="#preferences" class="list-group-item list-group-item-action">
+                    <i class="bi bi-gear"></i> Preferências
+                </a>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <!-- Informações Pessoais -->
+            <section id="profile-info" class="mb-5">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h4 class="mb-0"><i class="bi bi-person-circle"></i> Informações Pessoais</h4>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{% url 'usuarios:profile_edit' %}">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="first_name" class="form-label">Primeiro Nome</label>
+                                    <input type="text" class="form-control" id="first_name" name="first_name" 
+                                           value="{{ user.first_name }}" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="last_name" class="form-label">Sobrenome</label>
+                                    <input type="text" class="form-control" id="last_name" name="last_name" 
+                                           value="{{ user.last_name }}" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       value="{{ user.email }}" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Nome de Usuário</label>
+                                <input type="text" class="form-control" id="username" name="username" 
+                                       value="{{ user.username }}">
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="phone" class="form-label">Telefone</label>
+                                    <input type="tel" class="form-control" id="phone" name="phone" 
+                                           value="{{ profile.phone }}" placeholder="(00) 00000-0000">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="birth_date" class="form-label">Data de Nascimento</label>
+                                    <input type="date" class="form-control" id="birth_date" name="birth_date" 
+                                           value="{{ profile.birth_date|date:'Y-m-d' }}">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="bio" class="form-label">Sobre mim</label>
+                                <textarea class="form-control" id="bio" name="bio" rows="3" 
+                                          placeholder="Conte um pouco sobre você e seus interesses literários...">{% if user.profile.bio %}{{ user.profile.bio }}{% endif %}</textarea>
+                            </div>
+                            
+                            <hr class="my-4">
+                            
+                            <h5 class="mb-3"><i class="bi bi-geo-alt"></i> Endereço</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="cep" class="form-label">CEP</label>
+                                    <input type="text" class="form-control" id="cep" name="cep" 
+                                           value="{% if user.profile.cep %}{{ user.profile.cep }}{% endif %}" placeholder="00000-000">
+                                </div>
+                                <div class="col-md-8 mb-3">
+                                    <label for="address" class="form-label">Endereço</label>
+                                    <input type="text" class="form-control" id="address" name="address" 
+                                           value="{% if user.profile.address %}{{ user.profile.address }}{% endif %}">
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="city" class="form-label">Cidade</label>
+                                    <input type="text" class="form-control" id="city" name="city" 
+                                           value="{% if user.profile.city %}{{ user.profile.city }}{% endif %}">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="state" class="form-label">Estado</label>
+                                    <select class="form-select" id="state" name="state">
+                                        <option value="">Selecione...</option>
+                                        <option value="AC" {% if user.profile.state == 'AC' %}selected{% endif %}>Acre</option>
+                                        <option value="AL" {% if user.profile.state == 'AL' %}selected{% endif %}>Alagoas</option>
+                                        <option value="AP" {% if user.profile.state == 'AP' %}selected{% endif %}>Amapá</option>
+                                        <option value="AM" {% if user.profile.state == 'AM' %}selected{% endif %}>Amazonas</option>
+                                        <option value="BA" {% if user.profile.state == 'BA' %}selected{% endif %}>Bahia</option>
+                                        <option value="CE" {% if user.profile.state == 'CE' %}selected{% endif %}>Ceará</option>
+                                        <option value="DF" {% if user.profile.state == 'DF' %}selected{% endif %}>Distrito Federal</option>
+                                        <option value="ES" {% if user.profile.state == 'ES' %}selected{% endif %}>Espírito Santo</option>
+                                        <option value="GO" {% if user.profile.state == 'GO' %}selected{% endif %}>Goiás</option>
+                                        <option value="MA" {% if user.profile.state == 'MA' %}selected{% endif %}>Maranhão</option>
+                                        <option value="MT" {% if user.profile.state == 'MT' %}selected{% endif %}>Mato Grosso</option>
+                                        <option value="MS" {% if user.profile.state == 'MS' %}selected{% endif %}>Mato Grosso do Sul</option>
+                                        <option value="MG" {% if user.profile.state == 'MG' %}selected{% endif %}>Minas Gerais</option>
+                                        <option value="PA" {% if user.profile.state == 'PA' %}selected{% endif %}>Pará</option>
+                                        <option value="PB" {% if user.profile.state == 'PB' %}selected{% endif %}>Paraíba</option>
+                                        <option value="PR" {% if user.profile.state == 'PR' %}selected{% endif %}>Paraná</option>
+                                        <option value="PE" {% if user.profile.state == 'PE' %}selected{% endif %}>Pernambuco</option>
+                                        <option value="PI" {% if user.profile.state == 'PI' %}selected{% endif %}>Piauí</option>
+                                        <option value="RJ" {% if user.profile.state == 'RJ' %}selected{% endif %}>Rio de Janeiro</option>
+                                        <option value="RN" {% if user.profile.state == 'RN' %}selected{% endif %}>Rio Grande do Norte</option>
+                                        <option value="RS" {% if user.profile.state == 'RS' %}selected{% endif %}>Rio Grande do Sul</option>
+                                        <option value="RO" {% if user.profile.state == 'RO' %}selected{% endif %}>Rondônia</option>
+                                        <option value="RR" {% if user.profile.state == 'RR' %}selected{% endif %}>Roraima</option>
+                                        <option value="SC" {% if user.profile.state == 'SC' %}selected{% endif %}>Santa Catarina</option>
+                                        <option value="SP" {% if user.profile.state == 'SP' %}selected{% endif %}>São Paulo</option>
+                                        <option value="SE" {% if user.profile.state == 'SE' %}selected{% endif %}>Sergipe</option>
+                                        <option value="TO" {% if user.profile.state == 'TO' %}selected{% endif %}>Tocantins</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2 mb-3">
+                                    <label for="country" class="form-label">País</label>
+                                    <input type="text" class="form-control" id="country" name="country" 
+                                           value="{% if user.profile.country %}{{ user.profile.country }}{% else %}Brasil{% endif %}" readonly>
+                                </div>
+                            </div>
+                            
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> Salvar Alterações
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Segurança -->
+            <section id="security" class="mb-5">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h4 class="mb-0"><i class="bi bi-shield-lock"></i> Segurança</h4>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="mb-3">Alterar Senha</h5>
+                        <form action="{% url 'usuarios:change_password' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-key"></i> Alterar Senha
+                            </button>
+                        </form>
+                        
+                        <hr class="my-4">
+                        
+                        <h5 class="mb-3">Sessões Ativas</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Dispositivo</th>
+                                        <th>Local</th>
+                                        <th>Último Acesso</th>
+                                        <th>Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><i class="bi bi-laptop"></i> Chrome - Windows</td>
+                                        <td>São Paulo, SP</td>
+                                        <td>Agora</td>
+                                        <td><span class="badge bg-success">Atual</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Preferências -->
+            <section id="preferences" class="mb-5">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h4 class="mb-0"><i class="bi bi-gear"></i> Preferências</h4>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{% url 'usuarios:update_preferences' %}">
+                            {% csrf_token %}
+                            <h5 class="mb-3">Notificações</h5>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="email_notifications" 
+                                       name="email_notifications" {% if user.preferences.email_notifications %}checked{% endif %}>
+                                <label class="form-check-label" for="email_notifications">
+                                    Receber notificações por email
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="reservation_reminders" 
+                                       name="reservation_reminders" {% if user.preferences.reservation_reminders %}checked{% endif %}>
+                                <label class="form-check-label" for="reservation_reminders">
+                                    Lembrete de devolução de livros
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="new_books_notifications" 
+                                       name="new_books_notifications" {% if user.preferences.new_books_notifications %}checked{% endif %}>
+                                <label class="form-check-label" for="new_books_notifications">
+                                    Notificar sobre novos livros
+                                </label>
+                            </div>
+                            
+                            <hr class="my-4">
+                            
+                            <h5 class="mb-3">Gêneros Favoritos</h5>
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="genre_romance" name="genres" value="romance">
+                                        <label class="form-check-label" for="genre_romance">Romance</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="genre_mystery" name="genres" value="mystery">
+                                        <label class="form-check-label" for="genre_mystery">Mistério</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="genre_scifi" name="genres" value="scifi">
+                                        <label class="form-check-label" for="genre_scifi">Ficção Científica</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="genre_biography" name="genres" value="biography">
+                                        <label class="form-check-label" for="genre_biography">Biografia</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="genre_selfhelp" name="genres" value="selfhelp">
+                                        <label class="form-check-label" for="genre_selfhelp">Autoajuda</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-end mt-4">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> Salvar Preferências
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="alert alert-danger">
+                            <h5 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Zona de Perigo</h5>
+                            <p class="mb-0">Ações irreversíveis que afetarão permanentemente sua conta.</p>
+                            <hr>
+                            <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                                <i class="bi bi-trash"></i> Excluir Conta
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Avatar -->
+<div class="modal fade" id="avatarModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Alterar Foto de Perfil</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" enctype="multipart/form-data" action="{% url 'usuarios:upload_avatar' %}" id="avatarForm">
+                    {% csrf_token %}
+                    
+                    <!-- Preview da imagem -->
+                    <div class="text-center mb-3">
+                        <img id="avatarPreview" 
+                             src="{% if user.profile.avatar %}{{ user.profile.avatar.url }}{% else %}https://ui-avatars.com/api/?name={{ user.username }}&background=2c3e50&color=fff&size=200{% endif %}" 
+                             class="rounded-circle" 
+                             width="200" 
+                             height="200"
+                             style="object-fit: cover; border: 3px solid #ddd;"
+                             alt="Preview">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="avatar" class="form-label">Selecione uma imagem</label>
+                        <input type="file" 
+                               class="form-control" 
+                               id="avatar" 
+                               name="avatar" 
+                               accept="image/*" 
+                               required
+                               onchange="previewAvatar(event)">
+                        <small class="text-muted">Formatos aceitos: JPG, PNG, GIF. Tamanho máximo: 5MB</small>
+                    </div>
+                    
+                    {% if user.profile.avatar %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Você já possui uma foto de perfil. Ao fazer upload de uma nova, a anterior será substituída.
+                    </div>
+                    {% endif %}
+                    
+                    <div class="text-end">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload"></i> Fazer Upload
+                        </button>
+                    </div>
+                </form>
+                
+                {% if user.profile.avatar %}
+                <hr>
+                <form method="post" action="{% url 'usuarios:remove_avatar' %}" onsubmit="return confirm('Deseja remover sua foto de perfil?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger w-100">
+                        <i class="bi bi-trash"></i> Remover Foto Atual
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Excluir Conta -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Confirmar Exclusão</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Esta ação não pode ser desfeita!</strong></p>
+                <p>Ao excluir sua conta, você perderá:</p>
+                <ul>
+                    <li>Todas as suas reservas ativas</li>
+                    <li>Histórico de leituras</li>
+                    <li>Avaliações e comentários</li>
+                    <li>Preferências e configurações</li>
+                </ul>
+                <form method="post" action="{% url 'usuarios:delete_account' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="confirm_delete" class="form-label">
+                            Digite <strong>EXCLUIR</strong> para confirmar:
+                        </label>
+                        <input type="text" class="form-control" id="confirm_delete" 
+                               name="confirm_delete" required>
+                    </div>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger">Excluir Conta Permanentemente</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Preview da imagem antes do upload
+function previewAvatar(event) {
+    const file = event.target.files[0];
+    const preview = document.getElementById('avatarPreview');
+    
+    if (file) {
+        // Validar tamanho (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('A imagem deve ter no máximo 5MB!');
+            event.target.value = '';
+            return;
+        }
+        
+        // Validar tipo
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!validTypes.includes(file.type)) {
+            alert('Formato inválido! Use JPG, PNG ou GIF.');
+            event.target.value = '';
+            return;
+        }
+        
+        // Mostrar preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+</script>
+{% endblock %}genre_fiction" name="genres" value="fiction">
+                                        <label class="form-check-label" for="genre_fiction">Ficção</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="

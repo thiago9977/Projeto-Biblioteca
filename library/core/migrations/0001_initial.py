@@ -4,31 +4,58 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
             name='Livro',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name='ID',
+                    ),
+                ),
                 ('name', models.CharField(max_length=100, verbose_name='nome')),
                 ('author', models.CharField(max_length=100, verbose_name='autor')),
                 ('publisher', models.CharField(max_length=100, verbose_name='editora')),
                 ('year', models.IntegerField(verbose_name='ano')),
-                ('disponible', models.BooleanField(default=True, verbose_name='disponível')),
+                (
+                    'disponible',
+                    models.BooleanField(default=True, verbose_name='disponível'),
+                ),
             ],
         ),
         migrations.CreateModel(
             name='User',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name='ID',
+                    ),
+                ),
                 ('name', models.CharField(max_length=100, verbose_name='nome')),
-                ('email', models.EmailField(max_length=254, unique=True, verbose_name='email')),
-                ('phone', models.CharField(max_length=15, unique=True, verbose_name='telefone')),
+                (
+                    'email',
+                    models.EmailField(
+                        max_length=254, unique=True, verbose_name='email'
+                    ),
+                ),
+                (
+                    'phone',
+                    models.CharField(
+                        max_length=15, unique=True, verbose_name='telefone'
+                    ),
+                ),
             ],
         ),
     ]

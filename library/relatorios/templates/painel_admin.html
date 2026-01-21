@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4"><i class="bi bi-bar-chart-line"></i> Painel de Relatórios</h2>
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body text-center">
+                    <h1 class="display-4 fw-bold">{{ total_livros }}</h1>
+                    <p class="card-text">Total de Livros</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white h-100">
+                <div class="card-body text-center">
+                    <h1 class="display-4 fw-bold">{{ total_categorias }}</h1>
+                    <p class="card-text">Categorias</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body text-center">
+                    <h1 class="display-4 fw-bold">{{ livros_disponiveis }}</h1>
+                    <p class="card-text">Disponíveis</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card bg-danger text-white h-100">
+                <div class="card-body text-center">
+                    <h1 class="display-4 fw-bold">{{ livros_emprestados }}</h1>
+                    <p class="card-text">Emprestados</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    Distribuicão do Acervo
+                </div>
+                <div class="card-body">
+                    <canvas id="graficoAcervo"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+             </div>
+    </div>
+
+
+    <div class="row">
+        
+        <div class="col-12 mb-4">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Empréstimos de Hoje ({{ total_hoje }})</h5>
+                </div>
+                <div class="card-body">
+                    {% if emprestimos_hoje %}
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Livro</th>
+                                <th>Usuário</th>
+                                <th>Horário</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for emp in emprestimos_hoje %}
+                            <tr>
+                                <td>{{ emp.book.name }}</td>
+                                <td>{{ emp.user.username }}</td>
+                                <td>
+                                    {% if emp.created_at %}
+                                        {{ emp.created_at|date:"H:i" }}
+                                    {% else %}
+                                        <small class="text-muted">-</small>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                        <p class="text-muted">Nenhum empréstimo realizado hoje.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-book"></i> Top 5 Livros</h5>
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for livro in livros_top %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ livro.name }}
+                        <span class="badge bg-success rounded-pill">{{ livro.total_emprestimos }}</span>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item">Sem dados ainda.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-people"></i> Top 5 Leitores</h5>
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for usuario in usuarios_top %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ usuario.username }}
+                        <span class="badge bg-info text-dark rounded-pill">{{ usuario.total_emprestimos }}</span>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item">Sem dados ainda.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var qtdDisponiveis = Number("{{ livros_disponiveis|default:'0' }}");
+        var qtdEmprestados = Number("{{ livros_emprestados|default:'0' }}");
+
+        var canvasGrafico = document.getElementById('graficoAcervo');
+
+        if (canvasGrafico) {
+            var ctx = canvasGrafico.getContext('2d');
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Disponíveis', 'Emprestados'],
+                    datasets: [{
+                        label: 'Quantidade',
+                        data: [qtdDisponiveis, qtdEmprestados], 
+                        backgroundColor: [
+                            '#198754', // Verde
+                            '#dc3545'  // Vermelho
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

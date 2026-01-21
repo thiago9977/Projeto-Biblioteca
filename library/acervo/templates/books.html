@@ -1,0 +1,668 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Acervo de Livros - BiblioTech{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="display-5 fw-bold">
+                <i class="bi bi-book-fill"></i> Acervo de Livros
+            </h1>
+            <p class="text-muted">Explore nossa coleção completa de {{ books.qs.count }} livros</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-primary active" id="gridView">
+                    <i class="bi bi-grid-3x3"></i>
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="listView">
+                    <i class="bi bi-list"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Sidebar com Filtros -->
+        <div class="col-lg-3 mb-4">
+            <div class="card sticky-top" style="top: 100px;">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-funnel"></i> Filtros</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="{% url 'acervo:books' %}" id="filterForm">
+                        {{ books.form.as_p }}
+                        
+                        <!-- Botões -->
+                        <div class="d-grid gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-filter"></i> Aplicar Filtros
+                            </button>
+                            <a href="{% url 'acervo:books' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Limpar Filtros
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Livros -->
+        <div class="col-lg-9">
+            <!-- Informações e Resultados -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h5 class="mb-0">
+                        {{ books.qs.count }} livro{{ books.qs.count|pluralize }} encontrado{{ books.qs.count|pluralize }}
+                    </h5>
+                </div>
+            </div>
+
+            <!-- Grid View (Padrão) -->
+            <div id="gridViewContainer">
+                {% if books.qs %}
+                <div class="row g-4">
+                    {% for book in books.qs %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100">
+                            <div class="position-relative">
+                                {% if book.photo %}
+                                <img src="{{ book.photo.url }}" 
+                                     class="card-img-top" 
+                                     alt="{{ book.name }}"
+                                     style="height: 350px; object-fit: cover;">
+                                {% else %}
+                                <img src="https://via.placeholder.com/300x450?text={{ book.name|truncatewords:2 }}" 
+                                     class="card-img-top" 
+                                     alt="{{ book.name }}"
+                                     style="height: 350px; object-fit: cover;">
+                                {% endif %}
+                                
+                                <!-- Badge de Disponibilidade -->
+                                <span class="position-absolute top-0 end-0 m-2">
+                                    {% if book.is_available %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> Disponível
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-x-circle"></i> Emprestado
+                                    </span>
+                                    {% endif %}
+                                </span>
+
+                                <!-- Badge de Categoria -->
+                                {% if book.category %}
+                                <span class="position-absolute top-0 start-0 m-2">
+                                    <span class="badge bg-primary">{{ book.category }}</span>
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">{{ book.title }}</h5>
+                                <p class="text-muted small mb-2">
+                                    <i class="bi bi-person"></i> {{ book.author }}
+                                </p>
+                                
+                                <p class="card-text text-muted small flex-grow-1">
+                                    {{ book.description|truncatewords:20 }}
+                                </p>
+                                
+                                <div class="mt-auto">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        {% if book.publication_year %}
+                                        <small class="text-muted">
+                                            <i class="bi bi-calendar"></i> {{ book.publication_year }}
+                                        </small>
+                                        {% else %}
+                                        <span></span>
+                                        {% endif %}
+                                        <a href="{% url 'acervo:book_detail' book.slug %}" 
+                                           class="btn btn-primary btn-sm">
+                                            Ver Detalhes
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-search fs-1 text-muted d-block mb-3"></i>
+                    <h4 class="text-muted">Nenhum livro encontrado</h4>
+                    <p class="text-muted">Tente ajustar os filtros ou fazer uma nova busca</p>
+                    <a href="{% url 'acervo:books' %}" class="btn btn-primary">
+                        Ver Todos os Livros
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- List View -->
+            <div id="listViewContainer" style="display: none;">
+                {% if books.qs %}
+                <div class="list-group">
+                    {% for book in books.qs %}
+                    <div class="list-group-item list-group-item-action">
+                        <div class="row align-items-center">
+                            <div class="col-md-2">
+                                {% if book.photo %}
+                                <img src="{{ book.photo.url }}" 
+                                     class="img-fluid rounded" 
+                                     alt="{{ book.title }}"
+                                     style="max-height: 150px; object-fit: cover;">
+                                {% else %}
+                                <img src="https://via.placeholder.com/150x200?text=Livro" 
+                                     class="img-fluid rounded" 
+                                     alt="{{ book.title }}">
+                                {% endif %}
+                            </div>
+                            <div class="col-md-7">
+                                <h5 class="mb-1">{{ book.title }}</h5>
+                                <p class="mb-1 text-muted">
+                                    <i class="bi bi-person"></i> {{ book.author }}
+                                </p>
+                                <div class="mb-2">
+                                    {% if book.category %}
+                                    <span class="badge bg-primary">{{ book.category }}</span>
+                                    {% endif %}
+                                    {% if book.publication_year %}
+                                    <span class="badge bg-secondary">{{ book.publication_year }}</span>
+                                    {% endif %}
+                                    {% if book.is_available %}
+                                    <span class="badge bg-success">Disponível</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Emprestado</span>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">{{ book.description|truncatewords:30 }}</small>
+                            </div>
+                            <div class="col-md-3 text-end">
+                                <a href="{% url 'acervo:book_detail' book.slug %}" 
+                                   class="btn btn-primary">
+                                    Ver Detalhes
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Estilizar os campos do django-filter */
+#filterForm p {
+    margin-bottom: 1rem;
+}
+
+#filterForm label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+#filterForm input,
+#filterForm select {
+    width: 100%;
+}
+
+#filterForm input[type="text"],
+#filterForm input[type="number"],
+#filterForm select {
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #212529;
+    background-color: #fff;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+}
+
+#filterForm input[type="checkbox"] {
+    width: auto;
+    margin-right: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Alternar entre Grid e List View
+document.getElementById('gridView').addEventListener('click', function() {
+    document.getElementById('gridViewContainer').style.display = 'block';
+    document.getElementById('listViewContainer').style.display = 'none';
+    this.classList.add('active');
+    document.getElementById('listView').classList.remove('active');
+    localStorage.setItem('bookViewMode', 'grid');
+});
+
+document.getElementById('listView').addEventListener('click', function() {
+    document.getElementById('gridViewContainer').style.display = 'none';
+    document.getElementById('listViewContainer').style.display = 'block';
+    this.classList.add('active');
+    document.getElementById('gridView').classList.remove('active');
+    localStorage.setItem('bookViewMode', 'list');
+});
+
+// Restaurar preferência de visualização
+window.addEventListener('DOMContentLoaded', function() {
+    const viewMode = localStorage.getItem('bookViewMode');
+    if (viewMode === 'list') {
+        document.getElementById('listView').click();
+    }
+});
+</script>
+{% endblock %}
+
+
+
+<div class="container my-5">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="display-5 fw-bold">
+                <i class="bi bi-book-fill"></i> Acervo de Livros
+            </h1>
+            <p class="text-muted">Explore nossa coleção completa de {{ total_books }} livros disponíveis</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-primary active" id="gridView">
+                    <i class="bi bi-grid-3x3"></i>
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="listView">
+                    <i class="bi bi-list"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Sidebar com Filtros -->
+        <div class="col-lg-3 mb-4">
+            <div class="card sticky-top" style="top: 100px;">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-funnel"></i> Filtros</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="{% url 'acervo:books' %}" id="filterForm">
+                        <!-- Busca -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-search"></i> Buscar
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="search" 
+                                   placeholder="Título, autor, ISBN..." 
+                                   value="{{ request.GET.search }}">
+                        </div>
+
+                        <!-- Categoria -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-tag"></i> Categoria
+                            </label>
+                            <select class="form-select" name="category">
+                                <option value="">Todas as categorias</option>
+                                {% for category in categories %}
+                                <option value="{{ category }}" 
+                                        {% if request.GET.category == category %}selected{% endif %}>
+                                    {{ category }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Disponibilidade -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-check-circle"></i> Disponibilidade
+                            </label>
+                            <select class="form-select" name="availability">
+                                <option value="">Todos</option>
+                                <option value="available" 
+                                        {% if request.GET.availability == 'available' %}selected{% endif %}>
+                                    Disponíveis
+                                </option>
+                                <option value="unavailable" 
+                                        {% if request.GET.availability == 'unavailable' %}selected{% endif %}>
+                                    Emprestados
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Ano de Publicação -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-calendar"></i> Ano de Publicação
+                            </label>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <input type="number" 
+                                           class="form-control" 
+                                           name="year_from" 
+                                           placeholder="De" 
+                                           value="{{ request.GET.year_from }}">
+                                </div>
+                                <div class="col-6">
+                                    <input type="number" 
+                                           class="form-control" 
+                                           name="year_to" 
+                                           placeholder="Até" 
+                                           value="{{ request.GET.year_to }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ordenação -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-sort-down"></i> Ordenar por
+                            </label>
+                            <select class="form-select" name="sort">
+                                <option value="title" 
+                                        {% if request.GET.sort == 'title' or not request.GET.sort %}selected{% endif %}>
+                                    Título (A-Z)
+                                </option>
+                                <option value="-title" 
+                                        {% if request.GET.sort == '-title' %}selected{% endif %}>
+                                    Título (Z-A)
+                                </option>
+                                <option value="author" 
+                                        {% if request.GET.sort == 'author' %}selected{% endif %}>
+                                    Autor (A-Z)
+                                </option>
+                                <option value="-publication_year" 
+                                        {% if request.GET.sort == '-publication_year' %}selected{% endif %}>
+                                    Mais Recentes
+                                </option>
+                                <option value="publication_year" 
+                                        {% if request.GET.sort == 'publication_year' %}selected{% endif %}>
+                                    Mais Antigos
+                                </option>
+                                <option value="-created_at" 
+                                        {% if request.GET.sort == '-created_at' %}selected{% endif %}>
+                                    Adicionados Recentemente
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-filter"></i> Aplicar Filtros
+                            </button>
+                            <a href="{% url 'acervo:books' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Limpar Filtros
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Livros -->
+        <div class="col-lg-9">
+            <!-- Informações e Resultados -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h5 class="mb-0">
+                        Exibindo {{ books.start_index }}-{{ books.end_index }} de {{ books.paginator.count }} livros
+                    </h5>
+                    {% if request.GET.search %}
+                    <small class="text-muted">
+                        Resultados para: <strong>"{{ request.GET.search }}"</strong>
+                        <a href="{% url 'acervo:books' %}" class="text-decoration-none ms-2">
+                            <i class="bi bi-x-circle"></i> Limpar
+                        </a>
+                    </small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Grid View (Padrão) -->
+            <div id="gridViewContainer">
+                {% if books %}
+                <div class="row g-4">
+                    {% for book in books %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100">
+                            <div class="position-relative">
+                                {% if book.photo %}
+                                <img src="{{ book.photo.url }}" 
+                                     class="card-img-top" 
+                                     alt="{{ book.title }}"
+                                     style="height: 350px; object-fit: cover;">
+                                {% else %}
+                                <img src="https://via.placeholder.com/300x450?text={{ book.title|truncatewords:2 }}" 
+                                     class="card-img-top" 
+                                     alt="{{ book.title }}"
+                                     style="height: 350px; object-fit: cover;">
+                                {% endif %}
+                                
+                                <!-- Badge de Disponibilidade -->
+                                <span class="position-absolute top-0 end-0 m-2">
+                                    {% if book.is_available %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> Disponível
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-x-circle"></i> Emprestado
+                                    </span>
+                                    {% endif %}
+                                </span>
+
+                                <!-- Badge de Categoria -->
+                                <span class="position-absolute top-0 start-0 m-2">
+                                    <span class="badge bg-primary">{{ book.category }}</span>
+                                </span>
+                            </div>
+                            
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">{{ book.title }}</h5>
+                                <p class="text-muted small mb-2">
+                                    <i class="bi bi-person"></i> {{ book.author }}
+                                </p>
+                                
+                                <!-- Rating -->
+                                {% if book.rating %}
+                                <div class="mb-2">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= book.rating %}
+                                        <i class="bi bi-star-fill text-warning"></i>
+                                        {% else %}
+                                        <i class="bi bi-star text-warning"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <small class="text-muted">({{ book.reviews_count }})</small>
+                                </div>
+                                {% endif %}
+                                
+                                <p class="card-text text-muted small flex-grow-1">
+                                    {{ book.description|truncatewords:20 }}
+                                </p>
+                                
+                                <div class="mt-auto">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="bi bi-calendar"></i> {{ book.publication_year }}
+                                        </small>
+                                        <a href="{% url 'acervo:book_detail' book.slug %}" 
+                                           class="btn btn-primary btn-sm">
+                                            Ver Detalhes
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-search fs-1 text-muted d-block mb-3"></i>
+                    <h4 class="text-muted">Nenhum livro encontrado</h4>
+                    <p class="text-muted">Tente ajustar os filtros ou fazer uma nova busca</p>
+                    <a href="{% url 'acervo:books' %}" class="btn btn-primary">
+                        Ver Todos os Livros
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- List View -->
+            <div id="listViewContainer" style="display: none;">
+                {% if books %}
+                <div class="list-group">
+                    {% for book in books %}
+                    <div class="list-group-item list-group-item-action">
+                        <div class="row align-items-center">
+                            <div class="col-md-2">
+                                {% if book.photo %}
+                                <img src="{{ book.photo.url }}" 
+                                     class="img-fluid rounded" 
+                                     alt="{{ book.title }}">
+                                {% else %}
+                                <img src="https://via.placeholder.com/150x200?text=Livro" 
+                                     class="img-fluid rounded" 
+                                     alt="{{ book.title }}">
+                                {% endif %}
+                            </div>
+                            <div class="col-md-7">
+                                <h5 class="mb-1">{{ book.title }}</h5>
+                                <p class="mb-1 text-muted">
+                                    <i class="bi bi-person"></i> {{ book.author }}
+                                </p>
+                                <div class="mb-2">
+                                    <span class="badge bg-primary">{{ book.category }}</span>
+                                    <span class="badge bg-secondary">{{ book.publication_year }}</span>
+                                    {% if book.is_available %}
+                                    <span class="badge bg-success">Disponível</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Emprestado</span>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">{{ book.description|truncatewords:30 }}</small>
+                            </div>
+                            <div class="col-md-3 text-end">
+                                {% if book.rating %}
+                                <div class="mb-2">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= book.rating %}
+                                        <i class="bi bi-star-fill text-warning"></i>
+                                        {% else %}
+                                        <i class="bi bi-star text-warning"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <a href="{% url 'acervo:book_detail' book.slug %}" 
+                                   class="btn btn-primary">
+                                    Ver Detalhes
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Paginação -->
+            {% if books.has_other_pages %}
+            <nav class="mt-5">
+                <ul class="pagination justify-content-center">
+                    {% if books.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.availability %}&availability={{ request.GET.availability }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ books.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.availability %}&availability={{ request.GET.availability }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in books.paginator.page_range %}
+                    {% if books.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > books.number|add:'-3' and num < books.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.availability %}&availability={{ request.GET.availability }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if books.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ books.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.availability %}&availability={{ request.GET.availability }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ books.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.availability %}&availability={{ request.GET.availability }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+
+<script>
+// Alternar entre Grid e List View
+document.getElementById('gridView').addEventListener('click', function() {
+    document.getElementById('gridViewContainer').style.display = 'block';
+    document.getElementById('listViewContainer').style.display = 'none';
+    this.classList.add('active');
+    document.getElementById('listView').classList.remove('active');
+    localStorage.setItem('bookViewMode', 'grid');
+});
+
+document.getElementById('listView').addEventListener('click', function() {
+    document.getElementById('gridViewContainer').style.display = 'none';
+    document.getElementById('listViewContainer').style.display = 'block';
+    this.classList.add('active');
+    document.getElementById('gridView').classList.remove('active');
+    localStorage.setItem('bookViewMode', 'list');
+});
+
+// Restaurar preferência de visualização
+window.addEventListener('DOMContentLoaded', function() {
+    const viewMode = localStorage.getItem('bookViewMode');
+    if (viewMode === 'list') {
+        document.getElementById('listView').click();
+    }
+});
+
+// Auto-submit do formulário quando mudar select
+document.querySelectorAll('#filterForm select').forEach(select => {
+    select.addEventListener('change', function() {
+        document.getElementById('filterForm').submit();
+    });
+});
+</script>

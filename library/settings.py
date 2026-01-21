@@ -9,9 +9,12 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-import sentry_sdk
+
+import os
 from pathlib import Path
-from decouple import config, Csv
+
+import sentry_sdk
+from decouple import Csv, config
 from sentry_sdk.integrations.django import DjangoIntegration
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -41,15 +44,19 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    #Apps
+    # Apps
+    'django_filters',
     'library.core',
     'library.acervo',
+    'library.usuarios',
+    'library.emprestimos',
+    'library.relatorios',
     'test_without_migrations',
 ]
 
 EXTRA_APPS = []
 
-PROJECT_APPS =[]
+PROJECT_APPS = []
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -85,9 +92,9 @@ WSGI_APPLICATION = 'library.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
@@ -97,7 +104,8 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME': 'django.contrib.auth.password_validation.'
+        'UserAttributeSimilarityValidator',
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
@@ -126,9 +134,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = '/static/'
+STATIC_URL = 'static/'
 
-STATIC_ROOT = "static"
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 
 
 # Default primary key field type
@@ -137,15 +149,14 @@ STATIC_ROOT = "static"
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 JAZZMIN_SETTINGS = {
-    "site_title": "Library Admin",
-    "site_header": "Library",
-    "icons": {
-        "core.Livro": "fas fa-book",
+    'site_title': 'Library Admin',
+    'site_header': 'Library',
+    'icons': {
+        'core.Livro': 'fas fa-book',
     },
 }
 
 # Sentry
-
 
 
 sentry_sdk.init(
@@ -155,3 +166,60 @@ sentry_sdk.init(
     traces_sample_rate=1.0,
     send_default_pii=True,
 )
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+LOGIN_URL = 'usuarios:login'
+LOGIN_REDIRECT_URL = 'index'
+LOGOUT_REDIRECT_URL = 'index'
+
+# Logging
+LOG_DIR = os.path.join(BASE_DIR, 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+
+LOG_LEVEL = 'INFO'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{levelname}] {asctime} {name} | {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'simple': {
+            'format': '[{levelname}] {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': LOG_LEVEL,
+            'formatter': 'simple',
+        },
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'level': LOG_LEVEL,
+            'filename': os.path.join(LOG_DIR, 'library.log'),
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 5,
+            'encoding': 'utf-8',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': LOG_LEVEL,
+            'propagate': True,
+        },
+        'library': {
+            'handlers': ['console', 'file'],
+            'level': LOG_LEVEL,
+            'propagate': True,
+        },
+    },
+}

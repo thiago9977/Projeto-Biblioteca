@@ -1,0 +1,329 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Meu Dashboard - BiblioTech{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 mb-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    {% if user.profile.avatar %}
+                        <img src="{{ user.profile.avatar.url }}" 
+                             class="rounded-circle mb-3" width="128" height="128" alt="Avatar"
+                             style="object-fit: cover;">
+                    {% else %}
+                        <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=2c3e50&color=fff&size=128" 
+                             class="rounded-circle mb-3" width="128" height="128" alt="Avatar">
+                    {% endif %}
+                    <h5>{{ user.get_full_name|default:user.username }}</h5>
+                    <p class="text-muted small">{{ user.email }}</p>
+                    <span class="badge bg-primary">Membro desde {{ user.date_joined|date:"M Y" }}</span>
+                </div>
+            </div>
+            
+            <div class="list-group mt-3">
+                <a href="#reservations" class="list-group-item list-group-item-action active">
+                    <i class="bi bi-bookmark-check"></i> Meus Empréstimos
+                </a>
+                <a href="#history" class="list-group-item list-group-item-action">
+                    <i class="bi bi-clock-history"></i> Histórico
+                </a>
+                <a href="{% url 'usuarios:profile' %}" class="list-group-item list-group-item-action">
+                    <i class="bi bi-person"></i> Meu Perfil
+                </a>
+                <a href="#" class="list-group-item list-group-item-action">
+                    <i class="bi bi-heart"></i> Favoritos
+                </a>
+                <a href="#" class="list-group-item list-group-item-action">
+                    <i class="bi bi-star"></i> Minhas Avaliações
+                </a>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <!-- Welcome Message -->
+            <div class="mb-4">
+                <h2>Bem-vindo de volta, {{ user.first_name|default:user.username }}! 👋</h2>
+                <p class="text-muted">Aqui está um resumo das suas atividades</p>
+            </div>
+            
+            <!-- Estatísticas -->
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-primary text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0 opacity-75">Empréstimos Ativos</h6>
+                                    <h2 class="mb-0 fw-bold">{{ active_reservations_count }}</h2>
+                                </div>
+                                <i class="bi bi-bookmark-check fs-1 opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-success text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0 opacity-75">Livros Lidos</h6>
+                                    <h2 class="mb-0 fw-bold">{{ books_read_count }}</h2>
+                                </div>
+                                <i class="bi bi-book fs-1 opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-warning text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0 opacity-75">Avaliações Feitas</h6>
+                                    <h2 class="mb-0 fw-bold">{{ reviews_count }}</h2>
+                                </div>
+                                <i class="bi bi-star fs-1 opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Reservas Ativas -->
+            <section id="reservations" class="mb-5">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3><i class="bi bi-bookmark-check"></i> Empréstimos Ativos</h3>
+                    <span class="badge bg-primary rounded-pill fs-6">{{ active_reservations.count }} livros</span>
+                </div>
+                
+                {% if active_reservations %}
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Livro</th>
+                                    <th>Data do Empréstimo</th>
+                                    <th>Prazo de Devolução</th>
+                                    <th>Status</th>
+                                    <th class="text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for emprestimo in active_reservations %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="{{ emprestimo.book.photo.url }}" 
+                                                 width="50" class="rounded me-3" alt="{{ emprestimo.book.name }}">
+                                            <div>
+                                                <strong class="d-block">{{ emprestimo.book.name }}</strong>
+                                                <small class="text-muted">{{ emprestimo.book.author }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <i class="bi bi-calendar-check text-muted"></i>
+                                        {{ emprestimo.start_date|date:"d/m/Y" }}
+                                    </td>
+                                    <td>
+                                        {% if emprestimo.dias_ate_vencimento > 3 %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-clock"></i> {{ emprestimo.dias_ate_vencimento }} dias
+                                        </span>
+                                        {% elif emprestimo.dias_ate_vencimento > 0 %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-exclamation-triangle"></i> {{ emprestimo.dias_ate_vencimento }} dias
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-x-circle"></i> Expirado
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if emprestimo.esta_ativo %}
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-hourglass-split"></i> Ativa
+                                        </span>
+                                        {% elif emprestimo.esta_ativo %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Pronto
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'acervo:book_detail' emprestimo.book.slug %}" 
+                                               class="btn btn-outline-primary" title="Ver Detalhes">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <form method="post" action="{% url 'acervo:return_book' emprestimo.id %}" 
+                                                  class="d-inline" onsubmit="return confirm('Deseja devolver/cancelar este empréstimo?')">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-outline-danger" title="Devolver">
+                                                    <i class="bi bi-arrow-return-left"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-bookmark-x fs-1 text-muted d-block mb-3" style="font-size: 5rem;"></i>
+                        <h5 class="text-muted">Você não tem empréstimos ativos</h5>
+                        <p class="text-muted">Explore nosso acervo e faça empréstimos dos seus livros favoritos!</p>
+                        <a href="{% url 'acervo:books' %}" class="btn btn-primary mt-2">
+                            <i class="bi bi-search"></i> Explorar Acervo
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </section>
+            
+            <!-- Histórico -->
+            <section id="history">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3><i class="bi bi-clock-history"></i> Histórico de Leituras</h3>
+                    <span class="badge bg-secondary rounded-pill fs-6">
+                        {{ history|length }} livros
+                    </span>
+                </div>
+            
+                {% if has_history %}
+                <div class="card">
+                    <div class="card-body">
+                        {% for item in history %}
+                        <div class="row border-bottom pb-3 mb-3 {% if forloop.last %}border-0 pb-0 mb-0{% endif %}">
+                            <div class="col-md-2 mb-3 mb-md-0">
+                                {# capa do livro #}
+                                {% if item.book.photo %}
+                                    <img src="{{ item.book.photo.url }}"
+                                         class="img-fluid rounded shadow-sm"
+                                         alt="{{ item.book.name }}">
+                                {% else %}
+                                    <img src="{% static 'img/sem_capa.png' %}"
+                                         class="img-fluid rounded shadow-sm"
+                                         alt="{{ item.book.name }}">
+                                {% endif %}
+                            </div>
+            
+                            <div class="col-md-7">
+                                <h5 class="mb-1">{{ item.book.name }}</h5>
+                                <p class="text-muted mb-2">por {{ item.book.author }}</p>
+            
+                                <div class="mb-2">
+                                    <small class="text-muted d-block mb-1">
+                                        <i class="bi bi-calendar-check"></i>
+                                        Emprestado em:
+                                        <strong>{{ item.start_date|date:"d/m/Y" }}</strong>
+                                    </small>
+            
+                                    {% if item.end_date %}
+                                    <small class="text-muted d-block mb-1">
+                                        <i class="bi bi-calendar-event"></i>
+                                        Previsto para:
+                                        <strong>{{ item.end_date|date:"d/m/Y" }}</strong>
+                                    </small>
+                                    {% endif %}
+            
+                                    {% if item.date_returned %}
+                                    <small class="text-muted d-block">
+                                        <i class="bi bi-calendar-x"></i>
+                                        Devolvido em:
+                                        <strong>{{ item.date_returned|date:"d/m/Y" }}</strong>
+                                    </small>
+                                    {% endif %}
+                                </div>
+            
+                                {# status derivado das propriedades do model #}
+                                {% if item.date_returned %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> Devolvido
+                                    </span>
+                                {% elif item.esta_atrasado %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-exclamation-triangle"></i> Em atraso
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-hourglass-split"></i> Ativo
+                                    </span>
+                                {% endif %}
+            
+                                {# info de multa opcional #}
+                                {% if item.multa > 0 %}
+                                    <div class="mt-2">
+                                        <small class="text-danger">
+                                            Multa: R$ {{ item.multa }}
+                                        </small>
+                                    </div>
+                                {% elif item.multa_atual > 0 %}
+                                    <div class="mt-2">
+                                        <small class="text-danger">
+                                            Multa atual: R$ {{ item.multa_atual }}
+                                        </small>
+                                    </div>
+                                {% endif %}
+                            </div>
+            
+                            <div class="col-md-3 text-end">
+                                <a href="{% url 'acervo:book_detail' item.book.slug %}"
+                                   class="btn btn-outline-primary btn-sm mb-2 w-100">
+                                    <i class="bi bi-eye"></i> Ver Livro
+                                </a>
+                                {# aqui você pode adicionar botões extras, se quiser #}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                    <p class="text-muted">Você ainda não possui empréstimos.</p>
+                {% endif %}
+            </section>
+                
+                <!-- Paginação -->
+                {% if history.has_other_pages %}
+                <nav class="mt-4" aria-label="Navegação do histórico">
+                    <ul class="pagination justify-content-center">
+                        {% if history.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ history.previous_page_number }}#history">
+                                <i class="bi bi-chevron-left"></i> Anterior
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for num in history.paginator.page_range %}
+                        <li class="page-item {% if history.number == num %}active{% endif %}">
+                            <a class="page-link" href="?page={{ num }}#history">{{ num }}</a>
+                        </li>
+                        {% endfor %}
+                        
+                        {% if history.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ history.next_page_number }}#history">
+                                Próximo <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

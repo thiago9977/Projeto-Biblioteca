@@ -1,0 +1,579 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ book.title }} - BiblioTech{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Início</a></li>
+            <li class="breadcrumb-item"><a href="#">{{ book.category }}</a></li>
+            <li class="breadcrumb-item active">{{ book.title }}</li>
+        </ol>
+    </nav>
+    
+    <div class="row">
+        <!-- Imagem do Livro -->
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+                <img src="{{ book.photo.url }}" class="card-img-top" alt="{{ book.title }}">
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-body p-3">
+                    
+                    {% if user.is_authenticated %}
+                    
+                        {% if emprestimo_usuario %}
+                            <div class="bg-light border rounded p-2 mb-3">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="bi bi-book-fill text-primary me-2"></i>
+                                    <strong class="small">Você está com este livro</strong>
+                                </div>
+            
+                                {% if emprestimo_usuario.esta_atrasado %}
+                                    <div class="text-danger small mb-2">
+                                        <div><i class="bi bi-exclamation-triangle-fill"></i>
+                                            <strong>Atrasado há {{ emprestimo_usuario.dias_atraso }} dias</strong>
+                                        </div>
+                                        <div>Multa: <strong>R$ {{ emprestimo_usuario.multa_atual|floatformat:2 }}</strong></div>
+                                    </div>
+                                {% else %}
+                                    <div class="small mb-2 text-success">
+                                        <i class="bi bi-clock"></i> Devolução: {{ emprestimo_usuario.end_date|date:"d/m/Y" }}
+                                    </div>
+                                {% endif %}
+        
+                                {% if emprestimo_usuario.pode_renovar %}
+                                    <form method="post" action="{% url 'emprestimos:renew_book' emprestimo_usuario.id %}">
+                                        {% csrf_token %}
+                                        <button class="btn btn-warning btn-sm w-100"><i class="bi bi-arrow-repeat"></i> Renovar</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+        
+                            {% if not emprestimo_usuario.esta_atrasado %}
+                                <form method="post" action="{% url 'acervo:return_book' emprestimo_usuario.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success w-100">
+                                        <i class="bi bi-check-circle"></i> Devolver Livro
+                                    </button>
+                                </form>
+                            {% else %}
+                                <button class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#modalPagamentoMulta">
+                                    <i class="bi bi-qr-code"></i> Pagar Multa e Devolver
+                                </button>
+                            {% endif %}
+        
+                        {% elif book.is_available %}
+                            <form method="post" action="{% url 'emprestimos:emprestar_book' book.slug %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-bookmark-plus"></i> Fazer Empréstimo
+                                </button>
+                            </form>
+        
+                        {% else %}
+                            
+                            {% if reserva_usuario %}
+                                <div class="bg-light border rounded p-2 mb-2 text-center small">
+                                    <i class="bi bi-bookmark-check text-info"></i> Você reservou este livro<br>
+                                    
+                                    {% if voce_e_o_proximo %}
+                                        <span class="text-success"><strong>Você é o próximo da fila!</strong></span>
+                                    {% else %}
+                                        <span class="text-muted">Posição na fila: {{ reserva_usuario.posicao }}</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <form method="post" action="{% url 'acervo:cancel_reserva' reserva_usuario.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger w-100 mb-2">
+                                        <i class="bi bi-x-circle"></i> Cancelar Reserva
+                                    </button>
+                                </form>
+                            
+                            {% else %}
+                                <button class="btn btn-secondary w-100 mb-2" disabled>
+                                    <i class="bi bi-x-circle"></i> Emprestado
+                                </button>
+                                <p class="text-muted text-center small mb-2">Este livro está emprestado.</p>
+                                
+                                <form method="post" action="{% url 'emprestimos:reserve_book' book.slug %}">
+                                    {% csrf_token %}
+                                    <button class="btn btn-outline-primary w-100">
+                                        <i class="bi bi-bookmark-plus"></i> Reservar Livro
+                                    </button>
+                                </form>
+                            {% endif %}
+        
+                        {% endif %}
+        
+                    {% else %}
+                        <a href="{% url 'usuarios:login' %}" class="btn btn-primary w-100">Entre para Emprestar</a>
+                    {% endif %}
+                    
+                    <hr class="my-3">
+                    <button class="btn btn-outline-secondary w-100 mb-2"><i class="bi bi-heart"></i> Favoritos</button>
+                    <button class="btn btn-outline-secondary w-100"><i class="bi bi-share"></i> Compartilhar</button>
+        
+                </div>
+            </div>
+        </div>
+
+        {% if emprestimo_usuario and emprestimo_usuario.esta_atrasado %}
+        <div class="modal fade" id="modalPagamentoMulta" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content shadow">
+                    
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title"><i class="bi bi-qr-code"></i> Pagamento da Multa</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    
+                    <div class="modal-body text-center">
+                        <p>Valor da multa a ser paga:</p>
+                        <h4 class="text-danger fw-bold mb-3">
+                            R$ {{ emprestimo_usuario.multa_atual|floatformat:2 }}
+                        </h4>
+        
+                        <p class="mb-3">Escaneie o QR Code abaixo:</p>
+                        <img src="/media/pagamento/qr_code.png" class="img-fluid rounded border p-2 mb-3" style="max-width:240px;">
+        
+                        <div class="alert alert-info py-2 small">
+                            Após pagar, clique abaixo para confirmar a devolução.
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <form method="post" action="{% url 'acervo:return_book' emprestimo_usuario.id %}" class="w-100">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="bi bi-check2-circle"></i> Confirmar Pagamento e Devolver
+                            </button>
+                        </form>
+                    </div>
+        
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    
+        
+        <!-- Detalhes do Livro -->
+        <div class="col-md-8">
+            <h1 class="display-5 fw-bold mb-3">{{ book.name }}</h1>
+            <h4 class="text-muted mb-4">por {{ book.author }}</h4>
+            
+            <!-- Rating -->           
+            <div class="d-flex align-items-center mb-4">
+                <div class="me-3">
+                    {% for i in "12345" %}
+                        {% if forloop.counter <= book.average_rating %}
+                            <i class="bi bi-star-fill text-warning fs-5"></i>
+                        {% else %}
+                            <i class="bi bi-star text-warning fs-5"></i>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <span class="badge badge-rating fs-6">{{ book.average_rating }}/5</span>
+                <span class="text-muted ms-3">
+                    (<a href="#" data-bs-toggle="modal" data-bs-target="#ratingModal" class="text-decoration-none">
+                        {{ book.reviews.count }} avaliações
+                    </a>)
+                </span>
+            </div>
+            
+           <!-- Modal de Distribuição de Avaliações -->
+            <div class="modal fade" id="ratingModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-light">
+                            <h5 class="modal-title">
+                                <i class="bi bi-bar-chart-fill"></i> Distribuição de Avaliações
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            {% with dist=book.rating_distribution total=book.reviews.count %}
+                            
+                            <!-- Resumo -->
+                            <div class="text-center mb-4 pb-3 border-bottom">
+                                <h2 class="display-4 fw-bold text-warning mb-0">{{ book.average_rating }}</h2>
+                                <div class="mb-2">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= book.average_rating %}
+                                            <i class="bi bi-star-fill text-warning fs-4"></i>
+                                        {% else %}
+                                            <i class="bi bi-star text-warning fs-4"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <p class="text-muted mb-0">Baseado em {{ total }} avaliações</p>
+                            </div>
+            
+                            <!-- 5 Estrelas -->
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="me-3 text-end" style="min-width: 60px;">
+                                    <small class="fw-bold">5 <i class="bi bi-star-fill text-warning"></i></small>
+                                </div>
+                                <div class="progress flex-grow-1 me-3" style="height: 25px;">
+                                    <div class="progress-bar bg-warning rating-bar" 
+                                         data-count="{{ dist.rating_5 }}" 
+                                         data-total="{{ total }}">
+                                    </div>
+                                </div>
+                                <div class="text-start" style="min-width: 50px;">
+                                    <span class="badge bg-secondary">{{ dist.rating_5 }}</span>
+                                </div>
+                            </div>
+            
+                            <!-- 4 Estrelas -->
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="me-3 text-end" style="min-width: 60px;">
+                                    <small class="fw-bold">4 <i class="bi bi-star-fill text-warning"></i></small>
+                                </div>
+                                <div class="progress flex-grow-1 me-3" style="height: 25px;">
+                                    <div class="progress-bar bg-warning rating-bar" 
+                                         data-count="{{ dist.rating_4 }}" 
+                                         data-total="{{ total }}">
+                                    </div>
+                                </div>
+                                <div class="text-start" style="min-width: 50px;">
+                                    <span class="badge bg-secondary">{{ dist.rating_4 }}</span>
+                                </div>
+                            </div>
+            
+                            <!-- 3 Estrelas -->
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="me-3 text-end" style="min-width: 60px;">
+                                    <small class="fw-bold">3 <i class="bi bi-star-fill text-warning"></i></small>
+                                </div>
+                                <div class="progress flex-grow-1 me-3" style="height: 25px;">
+                                    <div class="progress-bar bg-warning rating-bar" 
+                                         data-count="{{ dist.rating_3 }}" 
+                                         data-total="{{ total }}">
+                                    </div>
+                                </div>
+                                <div class="text-start" style="min-width: 50px;">
+                                    <span class="badge bg-secondary">{{ dist.rating_3 }}</span>
+                                </div>
+                            </div>
+            
+                            <!-- 2 Estrelas -->
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="me-3 text-end" style="min-width: 60px;">
+                                    <small class="fw-bold">2 <i class="bi bi-star-fill text-warning"></i></small>
+                                </div>
+                                <div class="progress flex-grow-1 me-3" style="height: 25px;">
+                                    <div class="progress-bar bg-warning rating-bar" 
+                                         data-count="{{ dist.rating_2 }}" 
+                                         data-total="{{ total }}">
+                                    </div>
+                                </div>
+                                <div class="text-start" style="min-width: 50px;">
+                                    <span class="badge bg-secondary">{{ dist.rating_2 }}</span>
+                                </div>
+                            </div>
+            
+                            <!-- 1 Estrela -->
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="me-3 text-end" style="min-width: 60px;">
+                                    <small class="fw-bold">1 <i class="bi bi-star-fill text-warning"></i></small>
+                                </div>
+                                <div class="progress flex-grow-1 me-3" style="height: 25px;">
+                                    <div class="progress-bar bg-warning rating-bar" 
+                                         data-count="{{ dist.rating_1 }}" 
+                                         data-total="{{ total }}">
+                                    </div>
+                                </div>
+                                <div class="text-start" style="min-width: 50px;">
+                                    <span class="badge bg-secondary">{{ dist.rating_1 }}</span>
+                                </div>
+                            </div>
+            
+                            {% endwith %}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle"></i> Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const modal = document.getElementById('ratingModal');
+                    
+                    if (modal) {
+                        // Usar o evento 'shown.bs.modal' do Bootstrap
+                        modal.addEventListener('shown.bs.modal', function () {
+                            const bars = modal.querySelectorAll('.rating-bar');
+                            
+                            bars.forEach(bar => {
+                                const count = parseInt(bar.dataset.count) || 0;
+                                const total = parseInt(bar.dataset.total) || 1;
+                                const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+                                
+                                console.log('Count:', count, 'Total:', total, 'Percent:', percent); // DEBUG
+                                
+                                // Definir largura da barra
+                                bar.style.width = percent + '%';
+                                bar.style.transition = 'width 0.6s ease';
+                                
+                                // Mostrar porcentagem se > 10%
+                                if (percent > 10) {
+                                    bar.textContent = percent + '%';
+                                }
+                            });
+                        });
+                    }
+                });
+                </script>
+            
+
+
+            <!-- Preço -->
+            <div class="mb-4">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> <strong>Empréstimo gratuito</strong> por até 14 dias
+                </div>
+            </div>
+            
+            <!-- Informações do Livro -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informações do Produto</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="bi bi-tag"></i> ISBN:</strong> {{ book.isbn }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="bi bi-building"></i> Editora:</strong> {{ book.publisher }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="bi bi-calendar"></i> Ano de Publicação:</strong> {{ book.year }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="bi bi-file-earmark-text"></i> Páginas:</strong> {{ book.pages }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="bi bi-translate"></i> Idioma:</strong> {{ book.language }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="bi bi-box"></i> Status:</strong>
+                            {% if book.is_available %}
+                            <span class="badge bg-success">Disponível para Empréstimo</span>
+                            {% else %}
+                            <span class="badge bg-danger">Emprestado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Descrição -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-journal-text"></i> Sinopse</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-justify">{{ book.description }}</p>
+                </div>
+            </div>
+            
+            <!-- Avaliações -->
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-chat-left-text"></i> Avaliações de Leitores</h5>
+                </div>
+                <div class="card-body">
+                    {% for review in reviews %}
+                    <div class="mb-4 pb-3 border-bottom">
+                        <div class="d-flex align-items-center mb-2">
+                            {% if review.user.profile.avatar %}
+                                <img src="{{ review.user.profile.avatar.url }}" 
+                                    class="me-2" 
+                                    alt="{{ review.user.username }}"
+                                    style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"
+                                    onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ review.user.get_full_name|default:review.user.username|urlencode }}&background=3498db&color=fff&size=40';">
+                            {% else %}
+                                <img src="https://ui-avatars.com/api/?name={{ review.user.get_full_name|default:review.user.username|urlencode }}&background=3498db&color=fff&size=40" 
+                                    class="me-2" 
+                                    alt="{{ review.user.username }}"
+                                    style="width: 40px; height: 40px; border-radius: 50%;">
+                            {% endif %}
+                            <div>
+                                <strong>{{ review.user.get_full_name|default:review.user.username }}</strong>
+                                <div>
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= review.rating %}
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                        {% else %}
+                                            <i class="bi bi-star text-warning"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <small class="text-muted ms-2">{{ review.created_at|date:"d/m/Y" }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="mb-0">{{ review.comment }}</p>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center py-4">
+                        <i class="bi bi-chat-left-dots fs-1 d-block mb-2"></i>
+                        Seja o primeiro a avaliar este livro!
+                    </p>
+                    {% endfor %}
+                    
+                    {% if user.is_authenticated %}
+                        {% if user_review %}
+                            <button class="btn btn-outline-secondary w-100" data-bs-toggle="modal" data-bs-target="#reviewModal">
+                                <i class="bi bi-pencil"></i> Editar Minha Avaliação
+                            </button>
+                        {% else %}
+                            <button class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#reviewModal">
+                                <i class="bi bi-pencil"></i> Escrever uma Avaliação
+                            </button>
+                        {% endif %}
+                    {% else %}
+                        <a href="{% url 'usuarios:login' %}?next={{ request.path }}" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-pencil"></i> Faça login para avaliar
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+    
+    <!-- Livros Relacionados -->
+    <section class="mt-5">
+        <h2 class="section-title">
+            <i class="bi bi-collection"></i> Você também pode gostar
+        </h2>
+        <div class="row g-4">
+            {% for related_book in related_books %}
+            <div class="col-md-6 col-lg-3">
+                <div class="card h-100">
+                    <img src="{{ related_book.photo.url }}" class="card-img-top" alt="{{ related_book.name }}">
+                    <div class="card-body">
+                        <h6 class="card-title">{{ related_book.name }}</h6>
+                        <p class="text-muted small mb-2">{{ related_book.author }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            {% if related_book.is_available %}
+                            <span class="badge bg-success">Disponível</span>
+                            {% else %}
+                            <span class="badge bg-danger">Emprestado</span>
+                            {% endif %}
+                            <a href="{% url 'acervo:book_detail' related_book.slug %}" class="btn btn-sm btn-primary">Ver</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+
+<!-- Modal de Avaliação -->
+<div class="modal fade" id="reviewModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Avaliar: {{ book.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'acervo:book_detail' book.slug %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Sua Avaliação</label>
+                        <div class="rating-input">
+                            <input type="radio" name="rating" value="5" id="star5">
+                            <label for="star5"><i class="bi bi-star-fill"></i></label>
+                            <input type="radio" name="rating" value="4" id="star4">
+                            <label for="star4"><i class="bi bi-star-fill"></i></label>
+                            <input type="radio" name="rating" value="3" id="star3">
+                            <label for="star3"><i class="bi bi-star-fill"></i></label>
+                            <input type="radio" name="rating" value="2" id="star2">
+                            <label for="star2"><i class="bi bi-star-fill"></i></label>
+                            <input type="radio" name="rating" value="1" id="star1">
+                            <label for="star1"><i class="bi bi-star-fill"></i></label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="comment" class="form-label">Seu Comentário</label>
+                        <textarea class="form-control" name="comment" id="comment" rows="4" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Enviar Avaliação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Remove espaços extras do card */
+    .card-body {
+        padding: 1rem !important;
+    }
+    
+    .card-body .bg-light {
+        margin-bottom: 0.5rem !important;
+        padding: 0.5rem !important;
+    }
+    
+    .card-body form {
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .card-body button,
+    .card-body .btn {
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .card-body button:last-child,
+    .card-body .btn:last-child {
+        margin-bottom: 0 !important;
+    }
+    
+    .card-body p {
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* CSS do rating que já estava */
+    .rating-input {
+        direction: rtl;
+        display: inline-block;
+    }
+    .rating-input input {
+        display: none;
+    }
+    .rating-input label {
+        color: #ddd;
+        font-size: 2rem;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+    .rating-input > label:hover,
+    .rating-input > label:hover ~ label,
+    .rating-input input:checked ~ label {
+        color: #f39c12 !important;
+    }
+
+    .card-body > button,
+    .card-body > .btn,
+    .card-body > form,
+    .card-body > p {
+        margin-bottom: 0.5rem !important;
+}
+    </style>
+{% endblock %}

@@ -11,6 +11,7 @@ from library.acervo.forms import BookReviewForm
 from library.acervo.models import Book, Category
 from library.emprestimos.models.emprestimo import Emprestimo
 from library.emprestimos.models.reserva import Reserva
+from library.emprestimos.models.historico import Historico
 
 logger = logging.getLogger('library')
 
@@ -67,6 +68,7 @@ def return_book(request, emprestimo_id):
     """Devolver livro"""
     if request.method == 'POST':
         emprestimo = get_object_or_404(Emprestimo, id=emprestimo_id, user=request.user)
+        historico = Historico.objects.filter(book=emprestimo.book, user=emprestimo.user).last()
 
         if not emprestimo.esta_ativo:
             logger.error('Empréstimo não está ativo: %s', emprestimo.book.name)
@@ -86,6 +88,11 @@ def return_book(request, emprestimo_id):
 
         emprestimo.date_returned = timezone.now().date()
         emprestimo.save()
+
+        if historico:
+            historico.date_end = timezone.now().date()
+            historico.save()
+
         book = emprestimo.book
 
         prox_reserva = (
@@ -100,6 +107,12 @@ def return_book(request, emprestimo_id):
                 user=prox_reserva.user,
                 start_date=timezone.now().date(),
                 date_returned=None,
+            )
+            Historico.objects.create(
+                book=emprestimo.book,
+                user=prox_reserva.user,
+                date_start=timezone.now().date(),
+                date_end=None,
             )
             prox_reserva.ativa = False
             prox_reserva.save()

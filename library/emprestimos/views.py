@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from library.acervo.models import Book
 from library.emprestimos.models.emprestimo import Emprestimo
 from library.emprestimos.models.reserva import Reserva
+from library.emprestimos.models.historico import Historico
 
 logger = logging.getLogger('library')
 
@@ -27,6 +28,7 @@ def emprestar_book(request, book_slug):
         return redirect('acervo:book_detail', book_slug=book.slug)
 
     Emprestimo.objects.create(book=book, user=user)
+    Historico.objects.create(book=book, user=user)
 
     book.is_available = False
     book.save()

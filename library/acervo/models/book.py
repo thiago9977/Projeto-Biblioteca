@@ -21,7 +21,7 @@ class Book(AbstractBaseModel):
         max_length=50, verbose_name='idioma', blank=True, null=True
     )
     categories = models.ManyToManyField(
-        Category, verbose_name='categorias', blank=True, null=True, related_name='books'
+        Category, verbose_name='categorias', blank=True, related_name='books'
     )
     is_available = models.BooleanField(default=True)
 
